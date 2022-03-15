@@ -1,0 +1,188 @@
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: dockercoin-ns
+  labels:
+    app: worker
+spec:
+  strategy:  
+    rollingUpdate:  
+      maxSurge: 2
+      maxUnavailable: 2                                   
+  replicas: 5
+  selector:
+    matchLabels:
+      app: worker
+  template:
+     metadata:
+       name: worker
+       labels:
+         app: worker
+     spec:
+       containers:
+       - name: worker
+         image: brahimhamdi/worker:2.0
+         ports:
+         - containerPort: 80
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: rng
+  namespace: dockercoin-ns
+  labels:
+    app: rng
+spec:
+  selector:
+    matchLabels:
+      app: rng
+  template:
+    metadata:
+      labels:
+        app: rng
+    spec:
+      containers:
+      - name: rng
+        image: brahimhamdi/rng:1.0
+        ports:
+        - containerPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hasher
+  namespace: dockercoin-ns
+  labels:
+    app: hasher
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: hasher
+  template:
+    metadata:
+      labels:
+        app: hasher
+    spec:
+      containers:
+      - name: hasher
+        image: brahimhamdi/hasher:1.0
+        resources:
+          requests:
+            memory: "300Mi"
+            cpu: 0.1
+          limits:
+            memory: "600Mi"
+            cpu: 0.2
+        ports:
+        - containerPort: 80
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: dockercoin-ns
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:latest
+        ports:
+        - containerPort: 6379
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: dockercoin-ns
+  name: webui
+  labels:
+    app: webui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webui
+  template:
+    metadata:
+      labels:
+        app: webui
+    spec:
+      containers:
+      - name: webui
+        image: brahimhamdi/webui:1.0
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: dockercoin-ns
+  name: rng
+spec:
+  selector:
+    app: rng
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+
+---    
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: dockercoin-ns
+  name: hasher
+spec:
+  selector:
+    app: hasher
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+  
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: dockercoin-ns
+  name: redis
+spec:
+  selector:
+    app: redis
+  ports:
+  - protocol: TCP
+    port: 6379
+    targetPort: 6379
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: dockercoin-ns
+  name: webui
+spec:
+  selector:
+    app: webui
+  type: NodePort
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+    nodePort: 30007
